@@ -1,0 +1,335 @@
+---
+title: "Bibliometric Analysis of Small Lakes Research (1990–2024)"
+author: "Kate Regine Cunanan"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 10,
+  fig.height = 6
+)
+```
+
+```{r load_data, message=FALSE, warning=FALSE}
+# Load libraries
+library(bibliometrix)
+library(tidyverse)
+library(ggplot2)
+library(maps)
+
+# Import raw Scopus data
+scopus_raw <- convert2df(
+  file = "_small lake__.csv [no keyword limitation]",
+  dbsource = "scopus",
+  format = "csv"
+)
+
+# Run bibliometric analysis
+bib_analysis <- biblioAnalysis(scopus_raw, sep = ";")
+bib_summary <- summary(bib_analysis, k = 10, pause = FALSE)
+p1 <- plot(bib_analysis, k = 10, pause = FALSE)
+```
+
+## 1. Introduction
+
+Bibliometric analysis is a quantitative method used to evaluate and map the scientific literature of a specific field. This study uses bibliometric analysis to examine the research landscape on **small lakes** from 1990 to 2024, using data retrieved from the Scopus database.
+
+The analysis aims to identify publication trends, leading authors, influential journals, productive countries, and dominant research themes in the field of small lakes research.
+
+## 2. Data and Methods
+
+Data was retrieved from the **Scopus database** using "small lake*" and related terms as search keywords. The raw dataset consisted of 13,181 records spanning from 1898 to 2025.
+
+The dataset was cleaned using the following steps:
+
+- Filtered to include only publications from **1990 to 2024**
+- Retained only **Articles and Reviews** as document types
+- Removed **72 duplicate records** based on title
+
+The final cleaned dataset comprises **11,391 documents** published across **1,729 sources** by **28,700 authors**.
+
+All analyses and visualizations were performed in R using the `bibliometrix`, `tidyverse`, and `ggplot2` packages.
+
+## 3. Data Cleaning
+
+The raw dataset retrieved from Scopus consisted of **13,181 records** spanning 
+from 1898 to 2025. Before proceeding with the analysis, the data was inspected 
+and cleaned through the following steps.
+
+### 3.1 Checking for Missing Values
+
+The first step was to check whether key bibliometric fields contained any missing 
+values.
+
+```{r missing_values}
+colSums(is.na(scopus_raw[, c("AU", "TI", "PY", "SO", "DE", "ID", "AB", "TC", "CR", "C1")]))
+```
+
+All key fields returned zero missing values, indicating that the Scopus export 
+was complete and no imputation was necessary.
+
+### 3.2 Checking Publication Years
+
+Next, the distribution of publication years was examined to identify any 
+anomalous or sparse records.
+
+```{r year_distribution}
+table(scopus_raw$PY)
+```
+
+The data contained records as far back as 1898, with publication counts remaining 
+very sparse prior to 1990. To ensure a meaningful and consistent trend analysis, 
+the dataset was filtered to include only publications from **1990 onwards**. 
+Additionally, the single record from 2025 was excluded as the year is incomplete 
+and would skew the publication trend downward.
+
+### 3.3 Checking for Duplicates
+
+```{r duplicates}
+sum(duplicated(scopus_raw$TI))
+```
+
+A total of **72 duplicate records** were identified based on document title and 
+were removed to avoid inflating author and citation counts.
+
+### 3.4 Checking Document Types
+
+```{r document_types}
+table(scopus_raw$DT)
+```
+
+The dataset contained 11 document types, including articles, reviews, conference 
+papers, book chapters, books, editorials, and others. For bibliometric analysis, 
+only **peer-reviewed articles and reviews** were retained, as these are the most 
+comparable and citable document types in the literature.
+
+### 3.5 Applying the Cleaning Steps
+
+Based on the inspection above, the following cleaning steps were applied:
+
+- Filter to publications from **1990 to 2024**
+- Retain only **Articles** and **Reviews**
+- Remove **72 duplicate records** based on title
+
+```{r data_cleaning}
+# Filter by year
+scopus_clean <- scopus_raw[scopus_raw$PY >= 1990 & scopus_raw$PY <= 2024, ]
+
+# Keep only Articles and Reviews
+scopus_clean <- scopus_clean[scopus_clean$DT %in% c("ARTICLE", "REVIEW"), ]
+
+# Remove duplicates
+scopus_clean <- scopus_clean[!duplicated(scopus_clean$TI), ]
+
+# Confirm final dataset dimensions
+dim(scopus_clean)
+```
+
+The cleaned dataset comprises **11,391 documents** ready for bibliometric 
+analysis.
+
+## 4. Descriptive Overview
+
+The following key metrics summarize the dataset:
+
+| Metric | Value |
+|---|---|
+| Timespan | 1990–2024 |
+| Total Documents | 11,391 |
+| Total Authors | 28,700 |
+| Total Sources | 1,729 |
+| Annual Growth Rate | 3.53% |
+| Average Citations per Document | 33.55 |
+| Co-Authors per Document | 4.53 |
+| International Co-authorships | 27.71% |
+
+## 5. Visualizations
+
+### 5.1 Annual Scientific Production
+
+```{r annual_production}
+p1$AnnualScientProd +
+  labs(
+    title = "Annual Scientific Production on Small Lakes (1990–2024)",
+    subtitle = "Based on Scopus database | n = 11,391 documents",
+    x = "Year",
+    y = "Number of Articles",
+    caption = "Source: Scopus | Bibliometric Analysis"
+  )
+```
+
+### 5.2 Top 10 Most Productive Authors
+
+```{r top_authors}
+p1$MostProdAuthors +
+  labs(
+    title = "Top 10 Most Productive Authors in Small Lakes Research",
+    subtitle = "Based on Scopus database | n = 11,391 documents",
+    x = "Number of Articles",
+    y = "Authors",
+    caption = "Source: Scopus | Bibliometric Analysis"
+  )
+```
+
+### 5.3 Top 10 Most Relevant Journals
+
+```{r top_journals}
+journal_df <- as.data.frame(table(scopus_clean$SO))
+colnames(journal_df) <- c("Journal", "Articles")
+journal_df <- journal_df[order(-journal_df$Articles), ][1:10, ]
+
+ggplot(journal_df, aes(x = reorder(Journal, Articles), y = Articles)) +
+  geom_bar(stat = "identity", fill = "#2171b5") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Most Relevant Journals in Small Lakes Research",
+    subtitle = "Based on Scopus database | n = 11,391 documents",
+    x = "Journal",
+    y = "Number of Articles",
+    caption = "Source: Scopus | Bibliometric Analysis"
+  )
+```
+
+### 5.4 Country Scientific Production
+
+```{r country_map}
+library(maps)
+
+country_df <- as.data.frame(bib_analysis$Countries)
+colnames(country_df) <- c("Country", "Articles")
+country_df$Country <- stringr::str_to_title(country_df$Country)
+
+world_map <- map_data("world")
+country_df$Country[country_df$Country == "Usa"] <- "USA"
+country_df$Country[country_df$Country == "United Kingdom"] <- "UK"
+
+map_merged <- left_join(world_map, country_df, by = c("region" = "Country"))
+
+ggplot(map_merged, aes(x = long, y = lat, group = group, fill = Articles)) +
+  geom_polygon(color = "white", linewidth = 0.1) +
+  scale_fill_gradient(
+    low = "#c6dbef", high = "#08306b",
+    na.value = "gray90",
+    name = "Articles"
+  ) +
+  labs(
+    title = "Country Scientific Production on Small Lakes Research",
+    subtitle = "Based on Scopus database | n = 11,391 documents",
+    caption = "Source: Scopus | Bibliometric Analysis"
+  )
+```
+
+### 5.5 Top 20 Author Keywords
+
+```{r keywords}
+keywords <- scopus_clean %>%
+  select(DE) %>%
+  filter(!is.na(DE)) %>%
+  mutate(DE = tolower(DE)) %>%
+  separate_rows(DE, sep = ";") %>%
+  mutate(DE = str_trim(DE)) %>%
+  filter(DE != "")
+
+top_keywords <- keywords %>%
+  count(DE, sort = TRUE) %>%
+  slice_head(n = 20)
+
+ggplot(top_keywords, aes(x = reorder(DE, n), y = n)) +
+  geom_bar(stat = "identity", fill = "#2171b5") +
+  geom_text(aes(label = n), hjust = -0.2, size = 3, color = "gray30") +
+  coord_flip() +
+  labs(
+    title = "Top 20 Author Keywords in Small Lakes Research",
+    subtitle = "Based on Scopus database | n = 11,391 documents",
+    x = "Keyword",
+    y = "Frequency",
+    caption = "Source: Scopus | Bibliometric Analysis"
+  )
+```
+
+### 5.6 Thematic Map
+
+```{r thematic_map, fig.width=12, fig.height=8}
+thematic_map <- thematicMap(
+  scopus_clean,
+  field = "DE",
+  n = 250,
+  minfreq = 5,
+  stemming = FALSE,
+  size = 0.5,
+  n.labels = 1,
+  repel = TRUE
+)
+
+plot(thematic_map$map) +
+  labs(
+    title = "Thematic Map of Small Lakes Research",
+    subtitle = "Based on Scopus database | n = 11,391 documents",
+    caption = "Source: Scopus | Bibliometric Analysis"
+  )
+```
+
+### 5.7 Top 10 Most Cited Papers
+
+```{r citation_analysis}
+cited_df <- scopus_clean %>%
+  select(TI, AU, PY, SO, TC) %>%
+  arrange(desc(TC)) %>%
+  slice_head(n = 10) %>%
+  mutate(
+    Label = paste0(word(AU, 1), " (", PY, ")"),
+    TI = str_trunc(TI, 50)
+  )
+
+ggplot(cited_df, aes(x = reorder(Label, TC), y = TC)) +
+  geom_bar(stat = "identity", fill = "#2171b5") +
+  geom_text(aes(label = TC), hjust = -0.2, size = 3, color = "gray30") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Most Cited Papers in Small Lakes Research",
+    subtitle = "Based on Scopus database | n = 11,391 documents",
+    x = "Paper",
+    y = "Total Citations",
+    caption = "Source: Scopus | Bibliometric Analysis"
+  )
+```
+
+## 6. Conclusion
+
+This bibliometric analysis examined the scientific landscape of small lake research 
+using 11,391 documents retrieved from the Scopus database, covering the period 
+from 1990 to 2024. The analysis reveals a field that has grown consistently over 
+three decades, with an annual growth rate of 3.53% and a peak publication output 
+of 685 documents in 2022 — reflecting a growing recognition of the ecological 
+importance of small lakes in the global scientific community.
+
+The United States, China, and Canada emerged as the most productive countries, 
+while *Hydrobiologia* and the *Journal of Paleolimnology* were identified as the 
+leading publication outlets. The high international co-authorship rate of 27.71% 
+and an average of 4.53 co-authors per document suggest that small lake research 
+is increasingly collaborative and globally engaged.
+
+Thematic analysis of author keywords revealed that the dominant research themes 
+revolve around **climate change**, **eutrophication**, **phytoplankton**, and 
+**paleolimnology** — all of which are rooted in the natural sciences. This pattern 
+is consistent with the broader observation that small lake research has historically 
+been concentrated in ecological and hydrological dimensions, with comparatively 
+little attention given to the social and economic aspects of these water bodies.
+
+This gap represents a significant opportunity for future research. Small lakes, 
+despite being numerically dominant and biologically active, remain underexplored 
+in terms of their socio-economic contributions to surrounding communities — 
+including their roles in supporting local livelihoods, fisheries, aquaculture, and 
+rural economies. Future studies that bridge the natural and social sciences in the 
+context of small lake research would contribute meaningfully to a more holistic 
+understanding of these ecosystems and their value to human communities.
