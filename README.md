@@ -47,6 +47,7 @@ dominant themes, and gaps in the literature.
 ---
 
 ## Repository Structure
+```
 ├── bibliometric-analysis.Rmd   # Full R Markdown source code
 ├── index.html                  # Knitted HTML report (portfolio artifact)
 ├── scopus.csv                  # Raw Scopus export
@@ -58,6 +59,7 @@ dominant themes, and gaps in the literature.
 ├── 05_keywords.png             # Top 20 author keywords
 ├── 06_thematic_map.png         # Thematic map
 └── 07_citation_analysis.png    # Top 10 most cited papers
+```
 
 ---
 
