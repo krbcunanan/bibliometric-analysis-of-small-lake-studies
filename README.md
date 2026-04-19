@@ -50,8 +50,6 @@ dominant themes, and gaps in the literature.
 ```
 ├── bibliometric-analysis.Rmd   # Full R Markdown source code
 ├── index.html                  # Knitted HTML report (portfolio artifact)
-├── scopus.csv                  # Raw Scopus export
-├── scopus_clean.csv            # Cleaned dataset
 ├── 01_annual_production.png    # Annual scientific production chart
 ├── 02_top_authors.png          # Top 10 most productive authors
 ├── 03_top_journals.png         # Top 10 most relevant journals
